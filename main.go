@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/user"
 	"strings"
 
 	"github.com/kr/text"
 	"github.com/PuerkitoBio/goquery"
+	"github.com/satori/go.uuid"
 )
 
 func generateScroll(url string) string {
@@ -42,7 +44,7 @@ func generateScroll(url string) string {
 	for _, category := range categories {
 		tagsLine += ", " + strings.ToLower(category)
 	}
-	result += tagsLine
+	result += tagsLine + "\n"
 
 	return result
 }
@@ -56,7 +58,24 @@ func main() {
 		usage()
 		os.Exit(0)
 	}
+	u, err := user.Current()
+	if err != nil {
+		log.Fatal(err)
+	}
+	homeDir := u.HomeDir
 	for _, url := range os.Args[1:] {
-		println(generateScroll(url))
+		if !strings.HasPrefix(url, "http") {
+			continue
+		}
+		f, err := os.Create(homeDir + "/.alexandria/import/" + uuid.NewV4().String() + ".tex")
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer f.Close()
+
+		_, err = f.WriteString(generateScroll(url))
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 }
