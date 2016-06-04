@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 	"strings"
 
 	"github.com/kr/text"
@@ -46,7 +47,16 @@ func generateScroll(url string) string {
 	return result
 }
 
+func usage() {
+	fmt.Println("Usage: alexandria-import-usefulscience.org [URL]...")
+}
+
 func main() {
-	url := "http://www.usefulscience.org/post/within-same-grade-younger-students-are-more-likely-be-diagnosed-adhd"
-	println(generateScroll(url))
+	if len(os.Args) < 2 || os.Args[1] == "-h" || os.Args[1] == "--help" {
+		usage()
+		os.Exit(0)
+	}
+	for _, url := range os.Args[1:] {
+		println(generateScroll(url))
+	}
 }
