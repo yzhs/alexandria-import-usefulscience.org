@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/user"
@@ -12,8 +13,15 @@ import (
 	"github.com/satori/go.uuid"
 )
 
+var homeDir string
+
+func usage() {
+	fmt.Println("Usage: alexandria-import-usefulscience.org [URL]...")
+}
+
 func generateScroll(url string) string {
 	// Read page
+	url = strings.TrimSpace(url)
 	doc, err := goquery.NewDocument(url)
 	if err != nil {
 		log.Fatal(err)
@@ -49,12 +57,24 @@ func generateScroll(url string) string {
 	return result
 }
 
-func usage() {
-	fmt.Println("Usage: alexandria-import-usefulscience.org [URL]...")
+func handleURL(url string) {
+	if !strings.HasPrefix(url, "http") {
+		return
+	}
+	f, err := os.Create(homeDir + "/.alexandria/import/" + uuid.NewV4().String() + ".tex")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer f.Close()
+
+	_, err = f.WriteString(generateScroll(url))
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func main() {
-	if len(os.Args) < 2 || os.Args[1] == "-h" || os.Args[1] == "--help" {
+	if len(os.Args) > 1 && (os.Args[1] == "-h" || os.Args[1] == "--help") {
 		usage()
 		os.Exit(0)
 	}
@@ -62,20 +82,20 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	homeDir := u.HomeDir
-	for _, url := range os.Args[1:] {
-		if !strings.HasPrefix(url, "http") {
-			continue
-		}
-		f, err := os.Create(homeDir + "/.alexandria/import/" + uuid.NewV4().String() + ".tex")
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer f.Close()
+	homeDir = u.HomeDir
 
-		_, err = f.WriteString(generateScroll(url))
+	if len(os.Args) == 1 {
+		// Read URLs from stdin
+		bytes, err := ioutil.ReadAll(os.Stdin)
 		if err != nil {
 			log.Fatal(err)
+		}
+		for _, url := range strings.Split(string(bytes), "\n") {
+			handleURL(url)
+		}
+	} else {
+		for _, url := range os.Args[1:] {
+			handleURL(url)
 		}
 	}
 }
